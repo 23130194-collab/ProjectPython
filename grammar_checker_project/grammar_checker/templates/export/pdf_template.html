@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Grammar Check #{{ request_id }}</title>
+<!--    <style>-->
+<!--        body { font-family: 'DejaVu Sans', sans-serif; margin: 40px; line-height: 1.7; }-->
+<!--        .header { text-align: center; color: #198754; border-bottom: 4px solid #198754; padding-bottom: 20px; }-->
+<!--&lt;!&ndash;        .section { margin: 40px 0; }&ndash;&gt;-->
+<!--        h1 { color: #198754; }-->
+<!--        h2 { color: #157347; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }-->
+<!--        .original { background: #f8f9ba0; padding: 20px; border-radius: 12px; }-->
+<!--&lt;!&ndash;        .corrected { background: #d4edda; padding: 20px; border-radius: 12px; border-left: 6px solid #198754; }&ndash;&gt;-->
+<!--        .footer { text-align: center; margin-top: 80px; color: #6c757d; font-size: 14px; }-->
+<!--    </style>-->
+</head>
+<body>
+<!--    <div class="header">-->
+<!--        <h1>GRAMMAR CHECKER</h1>-->
+<!--        <p><strong>Mã yêu cầu:</strong> #{{ request_id }} | Ngày: {{ "now"|date:"d/m/Y H:i" }}</p>-->
+<!--    </div>-->
+
+<!--    <div class="section">-->
+<!--        <h2>Văn bản gốc</h2>-->
+<!--        <div class="original">{{ original|linebreaks }}</div>-->
+<!--    </div>-->
+
+    <div class="section">
+<!--        <h2>Văn bản đã được AI sửa chữa</h2>-->
+        <div class="corrected">{{ corrected|linebreaks }}</div>
+    </div>
+
+<!--    <div class="footer">-->
+<!--        © 2025 Grammar Checker<br>-->
+<!--    </div>-->
+</body>
+</html>

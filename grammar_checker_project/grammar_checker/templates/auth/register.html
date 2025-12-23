@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Đăng ký tài khoản{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white text-center">
+                    <h3>Đăng ký tài khoản</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Cách đơn giản nhất: render thẳng và thêm class bằng as_p hoặc thủ công -->
+                        <div class="mb-3">
+                            <label class="form-label">Tên đăng nhập</label>
+                            {{ form.username }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu</label>
+                            {{ form.password1 }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nhập lại mật khẩu</label>
+                            {{ form.password2 }}
+                        </div>
+
+                        <!-- Hiển thị lỗi nếu có -->
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">Đăng ký ngay</button>
+                        </div>
+                    </form>
+
+                    <hr>
+                    <p class="text-center mt-3">
+                        Đã có tài khoản? <a href="{% url 'login' %}" class="text-decoration-none">Đăng nhập</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Thêm CSS  -->
+<style>
+    input[type="text"], input[type="email"], input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        font-size: 1rem;
+    }
+    input:focus {
+        outline: none;
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+{% endblock %}

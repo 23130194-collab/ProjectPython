@@ -1,0 +1,7 @@
+/* static/css/register.css */
+.register-card {
+    max-width: 500px;
+    margin: 50px auto;
+    border-radius: 16px;
+    overflow: hidden;
+}

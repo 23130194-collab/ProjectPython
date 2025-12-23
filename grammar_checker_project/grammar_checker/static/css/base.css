@@ -1,0 +1,34 @@
+/* static/css/base.css */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+    min-height: 100vh;
+}
+
+.navbar {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #198754, #20c997);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 30px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3);
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}

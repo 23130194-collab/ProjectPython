@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Grammar Checker{% endblock %}
+
+{% block page_css %}
+    <link href="{% static 'css/editor.css' %}?v=5" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-lg">
+    <div class="card-header bg-success text-white text-center">
+        <h2 class="mb-0">Grammar Checker</h2>
+    </div>
+    <div class="card-body p-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Xin chào, <strong>{{ user.username }}</strong>!</h4>
+{#            <span class="badge bg-light text-dark border">#}
+{#                <i class="fas fa-magic"></i> Auto-check enabled#}
+{#            </span>#}
+        </div>
+        <hr>
+
+        <textarea id="editor"></textarea>
+        <!--       export -->
+        <div class="mt-4 text-end" id="export-actions" style="display:none;">
+    <a id="export-pdf" class="btn btn-danger me-2" target="_blank">
+        Tải PDF
+    </a>
+    <a id="export-docx" class="btn btn-primary" target="_blank">
+        Tải DOCX
+    </a>
+</div>
+<!--        finish-->
+
+        </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/editor.js' %}?v=3"></script>
+{% endblock %}

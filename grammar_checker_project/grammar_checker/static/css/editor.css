@@ -1,0 +1,91 @@
+/* grammar_checker/static/css/editor.css */
+
+/* Ẩn textarea gốc */
+#editor {
+    visibility: hidden;
+    height: 0;
+}
+
+/* Style cho Tooltip (Hộp thoại sửa lỗi) */
+.grammar-tooltip {
+    position: absolute; /* QUAN TRỌNG: Giúp tooltip bay lơ lửng */
+    z-index: 10000;      /* Luôn nằm trên cùng */
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    width: 280px;
+    padding: 16px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: none; /* Mặc định ẩn, JS sẽ bật lên */
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Tam giác nhỏ trỏ vào từ (cho đẹp) */
+.grammar-tooltip::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 15px;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    border-left: 1px solid #e2e8f0;
+    transform: rotate(45deg);
+}
+
+/* Tiêu đề lỗi */
+.grammar-tooltip .error-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ef4444; /* Màu đỏ */
+    margin-bottom: 8px;
+}
+
+/* Nút gợi ý sửa (Màu xanh lá) */
+.grammar-tooltip .suggestion-btn {
+    display: block;
+    width: 100%;
+    background-color: #f0fdf4;
+    color: #15803d;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 10px 12px;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.grammar-tooltip .suggestion-btn:hover {
+    background-color: #15803d;
+    color: white;
+    border-color: #15803d;
+}
+
+/* Nút Bỏ qua (Dismiss) */
+.grammar-tooltip .dismiss-btn {
+    display: inline-block;
+    margin-top: 12px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.grammar-tooltip .dismiss-btn:hover {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

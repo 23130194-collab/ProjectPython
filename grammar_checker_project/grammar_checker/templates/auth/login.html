@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập - Grammar Checker Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            background-color: #198754;
+            color: white;
+            text-align: center;
+            padding: 18px;
+            border-radius: 10px 10px 0 0;
+            margin: -30px -30px 30px -30px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .form-label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        .form-control {
+            height: 48px;
+            border-radius: 8px;
+            border: 1.5px solid #ced4da;
+            padding: 0 12px;
+        }
+        .form-control:focus {
+            border-color: #198754;
+            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+        }
+        .btn-login {
+            background-color: #198754;
+            border: none;
+            padding: 14px;
+            font-size: 17px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+        .btn-login:hover {
+            background-color: #157347;
+        }
+        .text-link {
+            color: #198754;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .text-link:hover {
+            text-decoration: underline;
+        }
+
+        input[type="text"], input[type="email"], input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        font-size: 1rem;
+        }
+
+        input:focus {
+        outline: none;
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-header">
+        Đăng nhập
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Tên đăng nhập -->
+        <div class="mb-4">
+            <label class="form-label">Tên đăng nhập</label>
+            <div>
+                {{ form.username }}
+            </div>
+        </div>
+
+        <!-- Mật khẩu -->
+        <div class="mb-4">
+            <label class="form-label">Mật khẩu</label>
+            <div>
+                {{ form.password }}
+            </div>
+        </div>
+
+        <!-- Lỗi đăng nhập -->
+        {% if form.errors %}
+            <div class="alert alert-danger text-center mb-4">
+                Tên đăng nhập hoặc mật khẩu không đúng!
+            </div>
+        {% endif %}
+
+        <!-- Nút đăng nhập -->
+        <button type="submit" class="btn btn-success btn-login w-100">
+            Đăng nhập
+        </button>
+    </form>
+    <hr>
+    <div class="text-center mt-4">
+        Chưa có tài khoản? 
+        <a href="{% url 'register' %}" class="text-link">Đăng ký</a>
+    </div>
+</div>
+
+</body>
+</html>
