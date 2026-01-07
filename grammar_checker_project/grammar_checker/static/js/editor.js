@@ -1,7 +1,9 @@
+// grammar_checker/static/js/editor.js
 let tooltip;
 let activeEditor = null;
 let typingTimer;
-const DONE_TYPING_INTERVAL = 1500;
+const DONE_TYPING_INTERVAL = 800;
+let currentErrors = [];
 
 function getCSRFToken() {
     const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -9,22 +11,31 @@ function getCSRFToken() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("1. JS Loaded - Fixed Highlighting Version");
+    console.log("Grammarly-like Grammar Checker Loaded");
     createTooltipElement();
 
     tinymce.init({
         selector: '#editor',
         height: 500,
         menubar: false,
-        plugins: 'lists link wordcount fullscreen image table code',
-        toolbar: 'undo redo | bold italic underline | bullist numlist | code',
+        plugins: 'lists link wordcount fullscreen code',
+        toolbar: 'undo redo | bold italic underline | bullist numlist | code | fullscreen',
         branding: false,
+        statusbar: true,
         content_style: `
-            body { font-family: 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.8; }
+            body { 
+                font-family: 'Segoe UI', sans-serif; 
+                font-size: 16px; 
+                line-height: 1.8;
+                padding: 20px;
+            }
             .grammar-error { 
-                border-bottom: 2px solid #dc3545; 
+                border-bottom: 2.5px solid #dc3545;
                 background-color: rgba(220, 53, 69, 0.1);
                 cursor: pointer;
+                padding: 1px 0;
+                border-radius: 2px;
+                transition: background-color 0.2s;
             }
             .grammar-error:hover {
                 background-color: rgba(220, 53, 69, 0.2);
@@ -33,30 +44,71 @@ document.addEventListener('DOMContentLoaded', function() {
         setup: function(editor) {
             activeEditor = editor;
 
+            // Auto check on typing
             editor.on('keyup', function(e) {
                 clearTimeout(typingTimer);
-                typingTimer = setTimeout(performGrammarCheck, DONE_TYPING_INTERVAL);
+                typingTimer = setTimeout(() => {
+                    performGrammarCheck();
+                }, DONE_TYPING_INTERVAL);
             });
 
-            editor.on('click', function(e) {
-                const target = e.target;
-                if (target.classList.contains('grammar-error')) {
-                    showTooltip(target, e.clientX, e.clientY,
-                        target.dataset.original,
-                        target.dataset.suggestion,
-                        target.dataset.message
-                    );
-                } else {
-                    hideTooltip();
-                }
+            // QUAN TRỌNG: Click event phải bind vào editor body
+            editor.on('init', function() {
+                const editorBody = editor.getBody();
+
+                // Sử dụng event delegation
+                editorBody.addEventListener('click', function(e) {
+                    console.log("🖱️ Clicked on:", e.target);
+
+                    // Tìm span.grammar-error gần nhất
+                    let target = e.target;
+                    if (!target.classList.contains('grammar-error')) {
+                        target = target.closest('.grammar-error');
+                    }
+
+                    if (target && target.classList.contains('grammar-error')) {
+                        console.log("Clicked on error span");
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const errorIndex = parseInt(target.dataset.errorIndex);
+                        const original = target.dataset.original;
+                        const suggestion = target.dataset.suggestion;
+                        const message = target.dataset.message;
+                        const errorType = target.dataset.errorType;
+
+                        console.log("Error data:", {errorIndex, original, suggestion, message, errorType});
+
+                        // Lấy vị trí của span trong viewport
+                        const rect = target.getBoundingClientRect();
+                        const iframe = editor.getContainer().querySelector('iframe');
+                        const iframeRect = iframe.getBoundingClientRect();
+
+                        showTooltip(
+                            target,
+                            rect.left + iframeRect.left,
+                            rect.bottom + iframeRect.top,
+                            original,
+                            suggestion,
+                            message,
+                            errorType
+                        );
+                    } else {
+                        hideTooltip();
+                    }
+                });
+
+                updateStatusBar(0);
             });
 
+            // Hide tooltip on keydown
             editor.on('keydown', () => hideTooltip());
         }
     });
 
+    // Click outside to hide tooltip
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.grammar-tooltip') && !e.target.closest('.tox-tinymce')) {
+        if (!e.target.closest('.grammar-tooltip')) {
             hideTooltip();
         }
     });
@@ -64,11 +116,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function performGrammarCheck() {
     if (!activeEditor) return;
+
     const text = activeEditor.getContent({format: 'text'}).trim();
-    if (!text || text.length < 3) return;
+    if (!text || text.length < 3) {
+        currentErrors = [];
+        updateStatusBar(0);
+        clearAllHighlights();
+        return;
+    }
 
     try {
-        console.log("Đang check grammar...");
+        console.log("Checking grammar...");
+        updateStatusBar(-1);
+
         const response = await fetch('/api/check/', {
             method: 'POST',
             headers: {
@@ -79,27 +139,26 @@ async function performGrammarCheck() {
         });
 
         const data = await response.json();
-        if (data.errors) {
+
+        if (data.errors && data.errors.length > 0) {
+            currentErrors = data.errors;
+            console.log(`Found ${data.errors.length} errors:`, data.errors);
             highlightErrors(data.errors);
+            updateStatusBar(data.errors.length);
+        } else {
+            currentErrors = [];
+            clearAllHighlights();
+            updateStatusBar(0);
+            console.log("No errors found");
         }
 
-        //export
-        //  HIỆN NÚT EXPORT SAU KHI CHECK
-if (data.request_id) {
-    const box = document.getElementById('export-actions');
-    const pdf = document.getElementById('export-pdf');
-    const docx = document.getElementById('export-docx');
-
-    if (box && pdf && docx) {
-        box.style.display = 'block';
-        pdf.href = `/export/pdf/${data.request_id}/`;
-        docx.href = `/export/docx/${data.request_id}/`;
-    }
-}
-////
+        if (data.request_id) {
+            showExportButtons(data.request_id);
+        }
 
     } catch (err) {
-        console.error("Lỗi API:", err);
+        console.error("API Error:", err);
+        updateStatusBar(0);
     }
 }
 
@@ -107,151 +166,291 @@ function highlightErrors(errors) {
     const editor = activeEditor;
     const bookmark = editor.selection.getBookmark(2, true);
 
-    // 1. Xóa highlight cũ (Reset về text thường)
-    const body = editor.getBody();
-    const spans = body.querySelectorAll('.grammar-error');
-    spans.forEach(span => {
-        const text = editor.getDoc().createTextNode(span.innerText);
-        span.parentNode.replaceChild(text, span);
-    });
+    clearAllHighlights();
 
-    // 2. Bôi đỏ lỗi mới
-    errors.forEach(err => {
-        const originalWord = err.original;
-        const suggestion = err.suggestions[0];
-        if (originalWord && suggestion) {
-            highlightWordInEditor(originalWord, suggestion, err.message);
+    let content = editor.getContent();
+    const plainText = editor.getContent({format: 'text'});
+
+    console.log("=" * 50);
+    console.log("Starting to highlight errors");
+    console.log("Plain text:", plainText);
+    console.log("Total errors:", errors.length);
+
+    errors.forEach((err, index) => {
+        const original = err.original;
+
+        // QUAN TRỌNG: Kiểm tra suggestions có đúng format không
+        let suggestion = '';
+        if (Array.isArray(err.suggestions) && err.suggestions.length > 0) {
+            suggestion = err.suggestions[0];
+        } else if (typeof err.suggestion === 'string') {
+            // Nếu API trả về "suggestion" thay vì "suggestions"
+            suggestion = err.suggestion;
         }
+
+        console.log(`Error ${index}:`, {
+            original: original,
+            suggestion: suggestion,
+            message: err.message,
+            type: err.type
+        });
+
+        if (!original || !suggestion) {
+            console.warn(`Skipping error ${index}: missing original or suggestion`);
+            return;
+        }
+
+        content = highlightTextInHTML(
+            content,
+            original,
+            suggestion,
+            err.message || 'Grammar error',
+            err.type || 'grammar',
+            index
+        );
     });
 
+    console.log("Highlighting complete");
+    console.log("=" * 50);
+
+    editor.setContent(content);
     editor.selection.moveToBookmark(bookmark);
 }
 
-// --- HÀM QUAN TRỌNG ĐÃ ĐƯỢC NÂNG CẤP ---
-function highlightWordInEditor(word, suggestion, message) {
-    const editorBody = activeEditor.getBody();
-    // TreeWalker duyệt qua tất cả các đoạn text trong editor
-    const treeWalker = document.createTreeWalker(editorBody, NodeFilter.SHOW_TEXT, null, false);
+function highlightTextInHTML(htmlContent, textToHighlight, suggestion, message, errorType, errorIndex) {
+    // 1. Escape các ký tự đặc biệt trong từ khóa tìm kiếm
+    const escapedText = textToHighlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    let nodeList = [];
-    while(treeWalker.nextNode()) nodeList.push(treeWalker.currentNode);
+    // 2. Tạo Pattern tìm kiếm (cho phép tìm xuyên qua thẻ in đậm/nghiêng)
+    const wordSeparator = '(?:\\s+|&nbsp;|<[^>]+>)+';
+    const searchPattern = escapedText.split(/\s+/).join(wordSeparator);
 
-    // Duyệt ngược để tránh lỗi index khi thay đổi DOM
-    for (let i = nodeList.length - 1; i >= 0; i--) {
-        const node = nodeList[i];
-        const text = node.nodeValue;
+    // 3. REGEX AN TOÀN:
+    // Nhóm 1 (<[^>]+>): Bắt các thẻ HTML (để bỏ qua chúng)
+    // Nhóm 2 (${searchPattern}): Bắt nội dung text thực sự cần highlight
+    const regex = new RegExp(`(<[^>]+>)|(${searchPattern})`, 'gi');
 
-        // Tìm TẤT CẢ các vị trí của từ trong đoạn text này
-        let searchIndex = 0;
-        while (true) {
-            const index = text.indexOf(word, searchIndex);
-            if (index === -1) break; // Hết tìm thấy
-
-            // KIỂM TRA RANH GIỚI TỪ (Word Boundary Check)
-            // Đây là bước sửa lỗi "go" trong "good" hay "a" trong "Last"
-            if (isWholeWord(text, index, word.length)) {
-
-                // Tách node text ra để chèn thẻ span
-                const range = activeEditor.dom.createRng();
-                range.setStart(node, index);
-                range.setEnd(node, index + word.length);
-
-                const span = activeEditor.dom.create('span', {
-                    'class': 'grammar-error',
-                    'data-original': word,
-                    'data-suggestion': suggestion,
-                    'data-message': message
-                }, word);
-
-                try {
-                    range.surroundContents(span);
-                    // Sau khi wrap, node hiện tại bị chia cắt, ta dừng xử lý node này để tránh lỗi
-                    break;
-                } catch (e) {
-                    console.warn(e);
-                }
-            }
-
-            // Tiếp tục tìm từ vị trí tiếp theo
-            searchIndex = index + 1;
+    // 4. Thực hiện thay thế có chọn lọc
+    return htmlContent.replace(regex, function(match, tagMatch, textMatch) {
+        // ƯU TIÊN TUYỆT ĐỐI: Nếu là thẻ HTML (ví dụ: <div>, <strong>, title="...") -> Giữ nguyên
+        if (tagMatch) {
+            return tagMatch;
         }
-    }
+
+        // Chỉ khi là text thực sự mới bọc thẻ lỗi
+        if (textMatch) {
+            return `<span class="grammar-error" 
+                data-original="${escapeHtml(textToHighlight)}" 
+                data-suggestion="${escapeHtml(suggestion)}" 
+                data-message="${escapeHtml(message)}" 
+                data-error-type="${errorType}"
+                data-error-index="${errorIndex}"
+                title="${escapeHtml(message)}">${match}</span>`;
+        }
+
+        return match;
+    });
 }
 
-// Hàm kiểm tra xem vị trí tìm thấy có phải là từ trọn vẹn không
-function isWholeWord(fullText, startIndex, length) {
-    const endIndex = startIndex + length;
-
-    // Kiểm tra ký tự liền trước
-    if (startIndex > 0) {
-        const charBefore = fullText[startIndex - 1];
-        // Nếu ký tự trước là chữ cái hoặc số -> Không phải từ trọn vẹn (VD: 'o' trong 'good')
-        if (/\w/.test(charBefore)) return false;
-    }
-
-    // Kiểm tra ký tự liền sau
-    if (endIndex < fullText.length) {
-        const charAfter = fullText[endIndex];
-        // Nếu ký tự sau là chữ cái hoặc số -> Không phải từ trọn vẹn (VD: 'g' trong 'good')
-        if (/\w/.test(charAfter)) return false;
-    }
-
-    return true;
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
-// --- Phần Tooltip giữ nguyên ---
+function clearAllHighlights() {
+    if (!activeEditor) return;
+    let content = activeEditor.getContent();
+    content = content.replace(/<span[^>]*class="grammar-error"[^>]*>(.*?)<\/span>/gi, '$1');
+    activeEditor.setContent(content);
+}
+
+// === TOOLTIP SYSTEM ===
+
 function createTooltipElement() {
     tooltip = document.createElement('div');
     tooltip.className = 'grammar-tooltip';
     tooltip.innerHTML = `
-        <div class="error-title">Lỗi ngữ pháp</div>
-        <div class="suggestion-btn" id="apply-fix-btn">Sửa</div>
-        <button class="dismiss-btn">Bỏ qua</button>
+        <div class="tooltip-header">
+            <div class="error-title">Grammar Error</div>
+            <div class="error-type"></div>
+        </div>
+        <div class="tooltip-body">
+            <div class="original-text"></div>
+            <div class="arrow">→</div>
+            <button class="suggestion-btn" id="apply-fix-btn"></button>
+        </div>
+        <button class="dismiss-btn">Ignore</button>
     `;
     document.body.appendChild(tooltip);
 
-    tooltip.querySelector('.dismiss-btn').onclick = hideTooltip;
+    tooltip.querySelector('.dismiss-btn').onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        hideTooltip();
+    };
 
-    tooltip.querySelector('#apply-fix-btn').onclick = function() {
-        if (currentErrorSpan) {
-            const suggestion = this.innerText;
-            // Thay thế thẻ span lỗi bằng text đúng
-            const newTextNode = activeEditor.getDoc().createTextNode(suggestion);
-            activeEditor.dom.replace(newTextNode, currentErrorSpan);
-
-            // Sau khi sửa, text mới dính vào text cũ, cần "normalize" lại text node (tùy chọn)
-            hideTooltip();
-        }
+    tooltip.querySelector('#apply-fix-btn').onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyFix();
     };
 }
 
 let currentErrorSpan = null;
 
-function showTooltip(targetSpan, x, y, original, suggestion, message) {
-    currentErrorSpan = targetSpan;
-    tooltip.querySelector('.error-title').innerText = message || "Gợi ý";
-    tooltip.querySelector('#apply-fix-btn').innerText = suggestion;
+function showTooltip(targetSpan, x, y, original, suggestion, message, errorType) {
+    console.log("📌 Showing tooltip");
+    console.log("  Suggestion:", suggestion);
 
-    const iframeRect = activeEditor.getContainer().querySelector('iframe').getBoundingClientRect();
+    if (!suggestion || suggestion.trim() === '') {
+        console.error("❌ ERROR: Suggestion is empty!");
+        return;
+    }
+
+    currentErrorSpan = targetSpan;
+
+    // Update content
+    tooltip.querySelector('.error-title').innerText = message || "Grammar Error";
+    tooltip.querySelector('.error-type').innerText = errorType ? `TYPE: ${errorType.toUpperCase()}` : '';
+
+    // Set suggestion button text
+    const suggestionBtn = tooltip.querySelector('#apply-fix-btn');
+    suggestionBtn.innerText = suggestion;
+    suggestionBtn.style.display = 'flex';
+
+    // === VỊ TRÍ SÁT NGAY DƯỚI LỖI ===
+
     const spanRect = targetSpan.getBoundingClientRect();
 
-    const top = iframeRect.top + spanRect.bottom + window.scrollY + 5;
-    const left = iframeRect.left + spanRect.left + window.scrollX;
+    // Tooltip width
+    const tooltipWidth = 320;
 
+    // VỊ TRÍ Y: Sát ngay dưới lỗi (0px gap)
+    let top = spanRect.bottom + window.scrollY;
+
+    // VỊ TRÍ X: Căn trái với từ lỗi
+    let left = spanRect.left + window.scrollX;
+
+    // Đảm bảo không tràn màn hình
+    if (left < 10) {
+        left = 10;
+    }
+    if (left + tooltipWidth > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipWidth - 10;
+    }
+
+    // Set position
     tooltip.style.top = `${top}px`;
     tooltip.style.left = `${left}px`;
     tooltip.style.display = 'block';
+
+    console.log("✅ Tooltip displayed at:", { top, left });
 }
 
 function hideTooltip() {
-    if (tooltip) tooltip.style.display = 'none';
+    if (tooltip) {
+        tooltip.style.display = 'none';
+    }
     currentErrorSpan = null;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // ... Code khởi tạo TinyMCE cũ ...
+// Sửa hàm applyFix trong editor.js
 
-    // THÊM: Xử lý sự kiện upload file
+function applyFix() {
+    console.log("Applying fix");
+
+    if (!currentErrorSpan || !activeEditor) {
+        console.log("No error span selected");
+        return;
+    }
+
+    const suggestion = currentErrorSpan.dataset.suggestion;
+    const errorIndex = parseInt(currentErrorSpan.dataset.errorIndex);
+
+    console.log("Replacing with:", suggestion);
+
+    // --- BẮT ĐẦU PHẦN SỬA ĐỔI (Sử dụng DOM Replace thay vì Selection) ---
+
+    // Sử dụng UndoManager để đảm bảo người dùng có thể Ctrl+Z lại được
+    activeEditor.undoManager.transact(function() {
+        // Tạo một node văn bản mới từ gợi ý (suggestion)
+        // createFragment giúp xử lý an toàn nếu suggestion có chứa ký tự đặc biệt
+        const newContent = activeEditor.dom.createFragment(suggestion);
+
+        // Lệnh này sẽ tìm thẻ currentErrorSpan trong editor
+        // và thay thế HOÀN TOÀN nó bằng nội dung mới
+        activeEditor.dom.replace(newContent, currentErrorSpan);
+    });
+
+    // --- KẾT THÚC PHẦN SỬA ĐỔI ---
+
+    // Cập nhật lại trạng thái mảng lỗi
+    if (!isNaN(errorIndex) && currentErrors[errorIndex]) {
+        currentErrors[errorIndex] = null;
+        const remainingErrors = currentErrors.filter(e => e !== null).length;
+        updateStatusBar(remainingErrors);
+    }
+
+    hideTooltip();
+    console.log("Fix applied via DOM Replace");
+
+    // Xử lý highlight lại các lỗi còn lại
+    const activeErrors = currentErrors.filter(e => e !== null);
+
+    if (activeErrors.length > 0) {
+        clearAllHighlights();
+        highlightErrors(activeErrors);
+        currentErrors = activeErrors;
+    } else {
+        console.log("All errors fixed!");
+        clearAllHighlights();
+        currentErrors = [];
+        updateStatusBar(0);
+    }
+}
+
+function updateStatusBar(errorCount) {
+    const statusbar = document.querySelector('.tox-statusbar__text-container');
+    if (!statusbar) return;
+
+    let statusHTML = '';
+
+    if (errorCount === -1) {
+        statusHTML = '<span style="color: #17a2b8; font-weight: 600;">Checking grammar...</span>';
+    } else if (errorCount === 0) {
+        statusHTML = '<span style="color: #28a745; font-weight: 600;">No grammar errors found</span>';
+    } else {
+        statusHTML = `<span style="color: #dc3545; font-weight: 700;">${errorCount} error${errorCount > 1 ? 's' : ''} found</span>`;
+    }
+
+    const existingStatus = statusbar.querySelector('.grammar-status');
+    if (existingStatus) {
+        existingStatus.innerHTML = statusHTML;
+    } else {
+        const statusElement = document.createElement('div');
+        statusElement.className = 'grammar-status';
+        statusElement.innerHTML = statusHTML;
+        statusElement.style.marginRight = '15px';
+        statusbar.insertBefore(statusElement, statusbar.firstChild);
+    }
+}
+
+function showExportButtons(requestId) {
+    const box = document.getElementById('export-actions');
+    const pdf = document.getElementById('export-pdf');
+    const docx = document.getElementById('export-docx');
+
+    if (box && pdf && docx) {
+        box.style.display = 'block';
+        pdf.href = `/export/pdf/${requestId}/`;
+        docx.href = `/export/docx/${requestId}/`;
+    }
+}
+
+// === FILE UPLOAD ===
+
+document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
@@ -262,15 +461,13 @@ async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Reset input để user có thể chọn lại đúng file đó nếu muốn
     event.target.value = '';
 
     const formData = new FormData();
     formData.append('file', file);
 
-    // Hiển thị loading (tạm thời set text editor để báo đang tải)
     if (activeEditor) {
-        activeEditor.setContent('<p><em>Đang đọc file... vui lòng chờ...</em></p>');
+        activeEditor.setContent('<p><em>Reading file...</em></p>');
     }
 
     try {
@@ -278,7 +475,6 @@ async function handleFileUpload(event) {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCSRFToken()
-                // Không set Content-Type khi gửi FormData, browser tự làm
             },
             body: formData
         });
@@ -286,22 +482,18 @@ async function handleFileUpload(event) {
         const data = await response.json();
 
         if (response.ok) {
-            // Đổ text vào editor
             if (activeEditor) {
-                // Chuyển ký tự xuống dòng (\n) thành thẻ <br> hoặc <p> để hiển thị đẹp trong HTML
                 const formattedText = data.text.replace(/\n/g, '<br>');
                 activeEditor.setContent(formattedText);
-
-                // Trigger check ngữ pháp ngay lập tức sau khi load file
-                setTimeout(performGrammarCheck, 500);
+                setTimeout(performGrammarCheck, 1000);
             }
         } else {
-            alert("Lỗi upload: " + data.error);
-            activeEditor.setContent(''); // Xóa loading
+            alert("Upload error: " + data.error);
+            if (activeEditor) activeEditor.setContent('');
         }
 
     } catch (err) {
-        console.error("Lỗi:", err);
-        alert("Có lỗi xảy ra khi tải file lên.");
+        console.error("Error:", err);
+        alert("An error occurred while uploading the file.");
     }
 }

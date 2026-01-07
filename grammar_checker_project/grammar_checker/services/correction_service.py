@@ -1,6 +1,6 @@
 # grammar_checker/services/correction_service.py
 from grammar_checker.models import CorrectionRequest, CorrectionResult
-from grammar_checker.checkers import HuggingFaceChecker
+from grammar_checker.checkers import OpenRouterChecker  # THAY ĐỔI TẠI ĐÂY
 
 
 class CorrectionService:
@@ -9,33 +9,27 @@ class CorrectionService:
         if not text.strip():
             return {"error": "Vui lòng nhập văn bản"}
 
-        # 1. Gọi HuggingFace Checker
-        # Lưu ý: Vì check real-time nên ta có thể cân nhắc CÓ LƯU vào DB hay không.
-        # Nếu lưu mỗi lần gõ thì DB sẽ rất rác.
-        # Tạm thời ta vẫn lưu để đúng với logic cũ của bạn, nhưng set status là AUTO_CHECK
+        # SỬ DỤNG GPT-4 Free
+        checker = OpenRouterChecker()
+        result = checker.correct(text)
 
-        checker = HuggingFaceChecker()
-        hf_result = checker.correct(text)
-
-        # Chỉ lưu vào DB nếu có lỗi để tiết kiệm, hoặc lưu log (tùy nhu cầu)
-        # Ở đây tôi làm mẫu: Vẫn tạo request nhưng tối giản
         request = CorrectionRequest.objects.create(
             user=user,
             original_text=text,
-            corrected_text=hf_result["corrected"],
+            corrected_text=result["corrected"],
             status="COMPLETED"
         )
 
         CorrectionResult.objects.create(
             request=request,
-            checker_name="HuggingFace-T5",
-            corrected_text=hf_result["corrected"],
-            error_details=hf_result.get("errors", [])
+            checker_name="OpenRouter-AI",
+            corrected_text=result["corrected"],
+            error_details=result.get("errors", [])
         )
 
         return {
             "request_id": request.id,
             "original": text,
-            "corrected": hf_result["corrected"],
-            "errors": hf_result.get("errors", [])  # Quan trọng: Frontend cần cái này
+            "corrected": result["corrected"],
+            "errors": result.get("errors", [])
         }

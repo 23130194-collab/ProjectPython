@@ -1,1 +1,2 @@
 from .huggingface_checker import HuggingFaceChecker
+from .openrouter_checker import OpenRouterChecker

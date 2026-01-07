@@ -14,7 +14,8 @@ class HuggingFaceChecker(BaseGrammarChecker):
 
         if HuggingFaceChecker._model is None:
             print("Đang tải model AI sửa ngữ pháp (vennify/t5-base-grammar)...")
-            model_name = "vennify/t5-base-grammar-correction"
+            # model_name = "vennify/t5-base-grammar-correction"
+            model_name = "pszemraj/flan-t5-large-grammar-synthesis"
 
             try:
                 HuggingFaceChecker._tokenizer = AutoTokenizer.from_pretrained(model_name)
