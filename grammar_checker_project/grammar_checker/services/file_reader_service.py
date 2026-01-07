@@ -1,4 +1,5 @@
 import io
+import re
 from docx import Document
 from pypdf import PdfReader
 
@@ -32,11 +33,15 @@ class FileReaderService:
                 for page in reader.pages:
                     text = page.extract_text()
                     if text:
+                        text = text.replace('\n', ' ')
+                        text = re.sub(r'\s+', ' ', text).strip()
+
                         full_text.append(text)
-                return '\n'.join(full_text)
+
+                return ' '.join(full_text)
 
             else:
-                raise ValueError("Định dạng file không được hỗ trợ (chỉ nhận .txt, .docx, .pdf)")
+                raise ValueError("Định dạng file không được hỗ trợ, chỉ hộ trợ các file có dạng .txt, .docx, .pdf")
 
         except Exception as e:
             raise ValueError(f"Lỗi khi đọc file: {str(e)}")

@@ -28,47 +28,56 @@ class HuggingFaceChecker(BaseGrammarChecker):
             except Exception as e:
                 print(f"Lỗi tải model: {e}")
                 raise
-
     def correct(self, text: str) -> dict:
         if not text.strip():
             return {"corrected": text, "errors": [], "source": "AI"}
 
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        # THAY ĐỔI LỚN TẠI ĐÂY:
+        # 1. Tách văn bản theo dòng (để giữ cấu trúc đoạn văn)
+        paragraphs = text.split('\n')
 
-        all_corrected_sentences = []
+        final_paragraphs = []
         all_errors = []
 
-        for sent in sentences:
-            if not sent.strip():
+        # 2. Duyệt qua từng đoạn văn
+        for para in paragraphs:
+            # Nếu là dòng trống thì giữ nguyên
+            if not para.strip():
+                final_paragraphs.append("")
                 continue
 
-            input_text = self.prefix + sent
-            inputs = HuggingFaceChecker._tokenizer(
-                input_text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=512
-            )
+            # 3. Trong mỗi đoạn, tách ra từng câu để AI sửa (Logic cũ)
+            sentences = re.split(r'(?<=[.!?])\s+', para.strip())
+            corrected_sentences_in_para = []
 
-            outputs = HuggingFaceChecker._model.generate(
-                **inputs,
-                max_new_tokens=256,
-                num_beams=7,
-                early_stopping=True,
-                repetition_penalty=1.0
-            )
+            for sent in sentences:
+                if not sent.strip():
+                    continue
 
-            corrected_sent = HuggingFaceChecker._tokenizer.decode(
-                outputs[0],
-                skip_special_tokens=True
-            ).strip()
+                input_text = self.prefix + sent
+                inputs = HuggingFaceChecker._tokenizer(
+                    input_text, return_tensors="pt", truncation=True, max_length=512
+                )
 
-            sub_errors = self.find_diff_errors(sent, corrected_sent)
+                outputs = HuggingFaceChecker._model.generate(
+                    **inputs, max_new_tokens=256, num_beams=5, early_stopping=True
+                )
 
-            all_errors.extend(sub_errors)
-            all_corrected_sentences.append(corrected_sent)
+                corrected_sent = HuggingFaceChecker._tokenizer.decode(
+                    outputs[0], skip_special_tokens=True
+                ).strip()
 
-        final_corrected_text = " ".join(all_corrected_sentences)
+                # Tìm lỗi (Logic cũ)
+                sub_errors = self.find_diff_errors(sent, corrected_sent)
+                all_errors.extend(sub_errors)
+
+                corrected_sentences_in_para.append(corrected_sent)
+
+            # 4. Gộp các câu lại thành đoạn (cách nhau bởi dấu cách)
+            final_paragraphs.append(" ".join(corrected_sentences_in_para))
+
+        # 5. Gộp các đoạn lại thành văn bản (cách nhau bởi xuống dòng)
+        final_corrected_text = "\n".join(final_paragraphs)
 
         return {
             "corrected": final_corrected_text,
