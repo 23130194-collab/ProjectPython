@@ -247,3 +247,61 @@ function hideTooltip() {
     if (tooltip) tooltip.style.display = 'none';
     currentErrorSpan = null;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ... Code khởi tạo TinyMCE cũ ...
+
+    // THÊM: Xử lý sự kiện upload file
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileUpload);
+    }
+});
+
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Reset input để user có thể chọn lại đúng file đó nếu muốn
+    event.target.value = '';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Hiển thị loading (tạm thời set text editor để báo đang tải)
+    if (activeEditor) {
+        activeEditor.setContent('<p><em>Đang đọc file... vui lòng chờ...</em></p>');
+    }
+
+    try {
+        const response = await fetch('/api/upload/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+                // Không set Content-Type khi gửi FormData, browser tự làm
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Đổ text vào editor
+            if (activeEditor) {
+                // Chuyển ký tự xuống dòng (\n) thành thẻ <br> hoặc <p> để hiển thị đẹp trong HTML
+                const formattedText = data.text.replace(/\n/g, '<br>');
+                activeEditor.setContent(formattedText);
+
+                // Trigger check ngữ pháp ngay lập tức sau khi load file
+                setTimeout(performGrammarCheck, 500);
+            }
+        } else {
+            alert("Lỗi upload: " + data.error);
+            activeEditor.setContent(''); // Xóa loading
+        }
+
+    } catch (err) {
+        console.error("Lỗi:", err);
+        alert("Có lỗi xảy ra khi tải file lên.");
+    }
+}

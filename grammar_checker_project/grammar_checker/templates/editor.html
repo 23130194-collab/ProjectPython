@@ -3,7 +3,7 @@
 {% block title %}Grammar Checker{% endblock %}
 
 {% block page_css %}
-    <link href="{% static 'css/editor.css' %}?v=5" rel="stylesheet">
+<link href="{% static 'css/editor.css' %}?v=6" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -14,28 +14,26 @@
     <div class="card-body p-5">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="mb-0">Xin chào, <strong>{{ user.username }}</strong>!</h4>
-{#            <span class="badge bg-light text-dark border">#}
-{#                <i class="fas fa-magic"></i> Auto-check enabled#}
-{#            </span>#}
-        </div>
+
+            <div>
+                <input type="file" id="fileInput" accept=".txt,.docx,.pdf" style="display: none;">
+                <button class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </div>
+            </div>
         <hr>
 
         <textarea id="editor"></textarea>
-        <!--       export -->
-        <div class="mt-4 text-end" id="export-actions" style="display:none;">
-    <a id="export-pdf" class="btn btn-danger me-2" target="_blank">
-        Tải PDF
-    </a>
-    <a id="export-docx" class="btn btn-primary" target="_blank">
-        Tải DOCX
-    </a>
-</div>
-<!--        finish-->
 
+        <div class="mt-4 text-end" id="export-actions" style="display:none;">
+            <a id="export-pdf" class="btn btn-danger me-2" target="_blank">Tải PDF</a>
+            <a id="export-docx" class="btn btn-primary" target="_blank">Tải DOCX</a>
         </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/editor.js' %}?v=3"></script>
+<script src="{% static 'js/editor.js' %}?v=4"></script>
 {% endblock %}
