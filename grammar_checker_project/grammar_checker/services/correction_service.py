@@ -1,4 +1,5 @@
 # grammar_checker/services/correction_service.py
+from django.utils.html import strip_tags
 from grammar_checker.models import CorrectionRequest, CorrectionResult
 from grammar_checker.checkers import OpenRouterChecker  # THAY ĐỔI TẠI ĐÂY
 
@@ -9,9 +10,12 @@ class CorrectionService:
         if not text.strip():
             return {"error": "Vui lòng nhập văn bản"}
 
+        clean_text_for_ai = text.replace('</p>', '\n').replace('<br>', '\n').replace('</div>', '\n')
+        clean_text_for_ai = strip_tags(clean_text_for_ai).strip()
+
         # SỬ DỤNG GPT-4 Free
         checker = OpenRouterChecker()
-        result = checker.correct(text)
+        result = checker.correct(clean_text_for_ai)
 
         request = CorrectionRequest.objects.create(
             user=user,

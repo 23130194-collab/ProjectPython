@@ -33,12 +33,21 @@ class FileReaderService:
                 for page in reader.pages:
                     text = page.extract_text()
                     if text:
+                        #Chuẩn hóa các dấu xuống dòng kép (hoặc nhiều hơn) thành một ký hiệu đặc biệt
+                        text = re.sub(r'([.!?])\s*\n\s*([A-Z])', r'\1<<PARAGRAPH_BREAK>>\2', text)
+
+                        #Thay thế các dấu xuống dòng đơn lẻ (\n) thành dấu cách
                         text = text.replace('\n', ' ')
-                        text = re.sub(r'\s+', ' ', text).strip()
+
+                        #Khôi phục lại dấu ngắt đoạn từ ký hiệu đặc biệt
+                        text = text.replace('<<PARAGRAPH_BREAK>>', '\n\n')
+
+                        #Xóa khoảng trắng thừa (nhưng không xóa \n)
+                        text = re.sub(r' +', ' ', text).strip()
 
                         full_text.append(text)
 
-                return ' '.join(full_text)
+                return '\n\n'.join(full_text)
 
             else:
                 raise ValueError("Định dạng file không được hỗ trợ, chỉ hộ trợ các file có dạng .txt, .docx, .pdf")

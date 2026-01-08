@@ -8,16 +8,9 @@ class OpenRouterChecker(BaseGrammarChecker):
     def __init__(self):
         # API Configuration
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.api_key = "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"
+        self.api_key = "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"
 
-        # Model options (chọn 1 trong các model này):
-        # - "openai/gpt-4" (chính xác nhất nhưng tốn tiền)
-        # - "openai/gpt-3.5-turbo" (cân bằng tốt)
-        # - "anthropic/claude-2" (rất tốt)
-        # - "google/gemini-pro" (miễn phí hoặc rẻ)
-        # - "meta-llama/llama-3-8b-instruct:free" (MIỄN PHÍ)
-
-        self.model = "openai/gpt-3.5-turbo"  # Khuyên dùng cho grammar checking
+        self.model = "openai/gpt-3.5-turbo"
 
     def correct(self, text: str) -> dict:
         if not text.strip():
@@ -45,6 +38,7 @@ class OpenRouterChecker(BaseGrammarChecker):
         2. Provide clear explanations
         3. Return ONLY the JSON object
         4. No markdown formatting, no extra text
+        5. IMPORTANT: Preserve the original paragraph structure and line breaks exactly. Do not merge paragraphs.
         
         Text to check: "{text}"
         
@@ -54,8 +48,8 @@ class OpenRouterChecker(BaseGrammarChecker):
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
-                "HTTP-Referer": "http://localhost:8000",  # Optional: your site URL
-                "X-Title": "Grammar Checker Pro"  # Optional: your app name
+                "HTTP-Referer": "http://localhost:8000",
+                "X-Title": "Grammar Checker Pro"
             }
 
             payload = {
