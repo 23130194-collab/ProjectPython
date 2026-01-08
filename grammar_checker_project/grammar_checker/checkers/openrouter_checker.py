@@ -8,7 +8,7 @@ class OpenRouterChecker(BaseGrammarChecker):
     def __init__(self):
         # API Configuration
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.api_key = "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"
+        self.api_key = "xxx"
 
         self.model = "openai/gpt-3.5-turbo"
 
