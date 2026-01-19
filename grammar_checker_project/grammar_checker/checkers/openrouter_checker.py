@@ -8,7 +8,7 @@ class OpenRouterChecker(BaseGrammarChecker):
     def __init__(self):
         # API Configuration
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.api_key = "xxx"
+        self.api_key = "xxxx"
 
         self.model = "openai/gpt-3.5-turbo"
 
@@ -16,7 +16,7 @@ class OpenRouterChecker(BaseGrammarChecker):
         if not text.strip():
             return {"corrected": text, "errors": [], "source": "OpenRouter"}
 
-        # Prompt được tối ưu để trả về JSON
+        # Prompt trả về JSON
         prompt = f"""You are an expert English grammar checker. Analyze the following text for ALL grammar, spelling, and punctuation errors.
 
         Return your response as a valid JSON object with this EXACT structure:
