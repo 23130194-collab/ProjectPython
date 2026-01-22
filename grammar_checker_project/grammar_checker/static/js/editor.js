@@ -164,7 +164,7 @@ async function performGrammarCheck() {
             currentErrors = data.errors;
             console.log(`Found ${data.errors.length} errors:`, data.errors);
             highlightErrors(data.errors);
-            updateStatusBar(data.errors.length);
+            countAndDisplayErrors();
         } else {
             currentErrors = [];
             clearAllHighlights();
@@ -412,69 +412,118 @@ function applyFix() {
 
     hideTooltip();
 
-    // Đếm số lỗi còn lại
-    const activeErrors = currentErrors.filter(e => e !== null);
-    const remainingCount = activeErrors.length;
+    // Đếm lại số lỗi thực tế
+    countAndDisplayErrors();
+}
 
-    console.log(`Fix applied. Remaining errors: ${remainingCount}`);
-    updateStatusBar(remainingCount);
-
-    // LOGIC TỰ ĐỘNG KIỂM TRA LẠI
-    if (remainingCount === 0) {
-        console.log("All errors fixed! Triggering re-check...");
-        // Xóa sạch các highlight (nếu còn sót) để giao diện sạch sẽ
-        clearAllHighlights();
-        updateStatusBar(-1); // Hiện trạng thái đang check...
-
-        // Đợi 1 chút cho DOM ổn định rồi gọi API
-        setTimeout(() => {
+// Hàm mới để đếm chính xác số lỗi đang hiển thị
+function countAndDisplayErrors() {
+    if (!activeEditor) return;
+    
+    // Đếm số thẻ span lỗi thực tế trong editor
+    const errorSpans = activeEditor.getBody().querySelectorAll('.grammar-error');
+    const count = errorSpans.length;
+    
+    console.log(`Real error count in DOM: ${count}`);
+    
+    // Nếu hết lỗi thì tự động check lại
+    if (count === 0 && currentErrors.length > 0) {
+         console.log("All errors fixed! Triggering re-check...");
+         clearAllHighlights();
+         updateStatusBar(-1);
+         setTimeout(() => {
             performGrammarCheck();
         }, 800);
     } else {
-        // LƯU Ý QUAN TRỌNG:
-        // Nếu vẫn còn lỗi, TA KHÔNG NÊN gọi highlightErrors(activeErrors) lại ngay lập tức.
-        // Vì văn bản đã thay đổi độ dài, vị trí (index) của các lỗi còn lại trong mảng cũ có thể bị lệch.
-        // Tốt nhất là giữ nguyên các highlight cũ, chỉ xóa cái vừa sửa (đã được làm bởi bước select & setContent ở trên).
+        updateStatusBar(count);
     }
+}
+
+// === TÍNH NĂNG MỚI: FIX ALL ERRORS ===
+function fixAllErrors() {
+    if (!activeEditor) return;
+
+    const editorBody = activeEditor.getBody();
+    const errorSpans = editorBody.querySelectorAll('.grammar-error');
+
+    if (errorSpans.length === 0) {
+        alert("Không có lỗi nào để sửa!");
+        return;
+    }
+
+    // Cập nhật thông báo xác nhận sang tiếng Việt
+    if (!confirm(`Bạn có chắc chắn muốn tự động sửa tất cả ${errorSpans.length} lỗi không?`)) {
+        return;
+    }
+
+    activeEditor.undoManager.transact(function() {
+        // Duyệt ngược từ dưới lên để tránh làm lệch vị trí DOM khi thay thế
+        for (let i = errorSpans.length - 1; i >= 0; i--) {
+            const span = errorSpans[i];
+            const suggestion = span.dataset.suggestion;
+
+            // Nếu suggestion rỗng -> Xóa từ đó
+            if (!suggestion || suggestion.trim() === "") {
+                span.remove(); // Xóa thẻ span khỏi DOM
+            } else {
+                // Thay thế thẻ span bằng text suggestion
+                const textNode = document.createTextNode(suggestion);
+                span.parentNode.replaceChild(textNode, span);
+            }
+        }
+    });
+
+    // Sau khi sửa xong
+    currentErrors = [];
+    updateStatusBar(0);
+    clearAllHighlights(); // Xóa sạch tàn dư nếu có
+
+    // Tự động kiểm tra lại sau 1 giây để đảm bảo
+    setTimeout(() => {
+        performGrammarCheck();
+    }, 1000);
 }
 
 function updateStatusBar(errorCount, source = '') {
     const statusbar = document.querySelector('.tox-statusbar__text-container');
-    // Lấy nút Rewrite từ HTML
     const rewriteBtn = document.getElementById('btn-rewrite');
+    const fixAllBtn = document.getElementById('btn-fix-all'); // Nút Fix All
 
     let statusHTML = '';
 
-    // Kiểm tra thanh statusbar của TinyMCE có tồn tại không
     if (!statusbar) return;
 
     if (errorCount === -1) {
-        // Trạng thái đang chạy -> Ẩn nút Rewrite
+        // Checking...
         statusHTML = '<span style="color: #17a2b8; font-weight: 600;">Checking grammar...</span>';
         if (rewriteBtn) rewriteBtn.style.display = 'none';
+        if (fixAllBtn) fixAllBtn.style.display = 'none';
     }
     else if (errorCount === 0) {
-        // Hết lỗi -> Hiện thông báo xanh VÀ Hiện nút Rewrite
+        // No errors
         statusHTML = `<span style="color: #28a745; font-weight: 600;">No grammar errors found.</span>`;
         if (source) statusHTML += ` <span style="color: #6c757d; font-size: 11px; margin-left: 10px;">(Checked by ${source})</span>`;
 
-        // [QUAN TRỌNG] Bật nút Rewrite lên
         if (rewriteBtn) {
-            rewriteBtn.style.display = 'block'; // Hoặc 'inline-block'
-            // Thêm hiệu ứng rung nhẹ nếu muốn gây chú ý
+            rewriteBtn.style.display = 'block';
             rewriteBtn.classList.add('animate__animated', 'animate__pulse');
         }
+        if (fixAllBtn) fixAllBtn.style.display = 'none'; // Ẩn nút Fix All
     }
     else {
-        // Có lỗi -> Hiện số lỗi đỏ VÀ Ẩn nút Rewrite
+        // Found errors
         statusHTML = `<span style="color: #dc3545; font-weight: 700;">Found ${errorCount} errors</span>`;
         if (source) statusHTML += ` <span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 8px; color: #495057;">🤖 ${source}</span>`;
 
-        // [QUAN TRỌNG] Ẩn nút đi để user tập trung sửa lỗi
         if (rewriteBtn) rewriteBtn.style.display = 'none';
+        
+        // HIỆN NÚT FIX ALL
+        if (fixAllBtn) {
+            fixAllBtn.style.display = 'block';
+            fixAllBtn.innerText = `Fix All (${errorCount})`;
+        }
     }
 
-    // Cập nhật nội dung chữ vào thanh statusbar
     const existingStatus = statusbar.querySelector('.grammar-status');
     if (existingStatus) {
         existingStatus.innerHTML = statusHTML;
