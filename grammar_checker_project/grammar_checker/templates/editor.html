@@ -3,35 +3,93 @@
 {% block title %}Grammar Checker Pro{% endblock %}
 
 {% block page_css %}
-<link href="{% static 'css/editor.css' %}?v=15" rel="stylesheet">
+    <link href="{% static 'css/editor.css' %}?v=15" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="card shadow-lg">
-    <div class="card-header bg-success text-white text-center">
-        <h2 class="mb-0">Grammar Checker</h2>
-    </div>
-    <div class="card-body p-5">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0">Welcome, <strong>{{ user.username }}</strong>!</h4>
-            <div>
-                <input type="file" id="fileInput" accept=".txt,.docx,.pdf" style="display: none;">
-                <button class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()">
-                    Upload File
+    <div class="card shadow-lg">
+        <div class="card-header bg-success text-white text-center">
+            <h2 class="mb-0">Grammar Checker</h2>
+        </div>
+        <div class="card-body p-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Welcome, <strong>{{ user.username }}</strong>!</h4>
+                <div>
+                    <input type="file" id="fileInput" accept=".txt,.docx,.pdf" style="display: none;">
+                    <button class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()">
+                        Upload File
+                    </button>
+                </div>
+            </div>
+
+            <textarea id="editor"></textarea>
+
+            <div class="mt-4 d-flex justify-content-end gap-2" id="export-actions" style="display:none;">
+                <button id="btn-rewrite" class="btn btn-warning text-dark fw-bold shadow-sm"
+                        onclick="openRewriteModal()" style="display: none;">
+                    AI Rewrite
                 </button>
+                <a id="export-pdf" class="btn btn-danger shadow-sm" target="_blank">Download PDF</a>
+                <a id="export-docx" class="btn btn-primary shadow-sm" target="_blank">Download Word</a>
+            </div>
+
+            <div id="customRewriteModal" class="custom-modal-overlay" style="display: none;">
+                <div class="custom-modal-content" style="max-width: 600px;">
+                    <div class="custom-modal-header">
+                        <h3 class="modal-title">AI Rewrite Assistant</h3>
+                        <button class="close-btn" onclick="closeRewriteModal()">&times;</button>
+                    </div>
+
+                    <div class="custom-modal-body">
+
+                        <div id="rewrite-step-1" class="text-center">
+                            <p class="lead mb-4">How would you like to rewrite your text?</p>
+                            <div class="d-grid gap-3">
+                                <button onclick="requestRewrite('Formal')"
+                                        class="btn btn-lg btn-outline-primary shadow-sm text-start p-3">
+                                    <strong>Formal</strong> <br>
+                                    <small class="text-muted">Professional, academic, and polite.</small>
+                                </button>
+                                <button onclick="requestRewrite('Creative')"
+                                        class="btn btn-lg btn-outline-purple shadow-sm text-start p-3"
+                                        style="color:#6f42c1; border-color:#6f42c1">
+                                    <strong>Creative</strong> <br>
+                                    <small class="text-muted text-purple">Engaging, vivid, storytelling.</small>
+                                </button>
+                                <button onclick="requestRewrite('Concise')"
+                                        class="btn btn-lg btn-outline-success shadow-sm text-start p-3">
+                                    <strong>Concise</strong> <br>
+                                    <small class="text-muted">Short, clear, direct.</small>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="rewrite-loading" style="display: none; text-align: center; padding: 40px;">
+                            <div class="spinner"></div>
+                            <p class="mt-3 text-muted">AI is crafting your <span id="loading-style-text"
+                                                                                 class="fw-bold"></span> version...</p>
+                        </div>
+
+                        <div id="rewrite-step-2" style="display: none;">
+                            <h5 class="text-primary mb-3">Result (<span id="result-style-name"></span>):</h5>
+                            <div class="p-3 bg-white border rounded shadow-sm mb-4" style="min-height: 100px;">
+                                <p id="rewrite-result-text" class="mb-0" style="font-size: 16px; line-height: 1.6;"></p>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button onclick="resetRewriteModal()" class="btn btn-secondary">Back</button>
+                                <button onclick="applyRewriteResult()" class="btn btn-success fw-bold">Apply This
+                                    Version
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <textarea id="editor"></textarea>
-
-        <div class="mt-4 text-end" id="export-actions" style="display:none;">
-            <a id="export-pdf" class="btn btn-danger me-2" target="_blank">Download PDF</a>
-            <a id="export-docx" class="btn btn-primary" target="_blank">Download Word</a>
-        </div>
     </div>
-</div>
+
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/editor.js' %}?v=15"></script>
+    <script src="{% static 'js/editor.js' %}?v=15"></script>
 {% endblock %}

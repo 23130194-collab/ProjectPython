@@ -10,39 +10,42 @@ class OpenRouterChecker(BaseGrammarChecker):
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
         self.api_key = "xxxx"
 
-        self.model = "openai/gpt-3.5-turbo"
+        self.model = "google/gemini-2.0-flash-001"
 
     def correct(self, text: str) -> dict:
         if not text.strip():
-            return {"corrected": text, "errors": [], "source": "OpenRouter"}
+            return {"corrected": text, "errors": [], "source": "Gemini AI"}
 
-        # Prompt trả về JSON
-        prompt = f"""You are an expert English grammar checker. Analyze the following text for ALL grammar, spelling, and punctuation errors.
-
-        Return your response as a valid JSON object with this EXACT structure:
-        
-        {{
-          "corrected": "the fully corrected version of the text",
-          "errors": [
-            {{
-              "original": "the incorrect word or phrase",
-              "suggestion": "the correct version",
-              "message": "brief explanation of what's wrong",
-              "type": "grammar/spelling/punctuation/article/verb_tense/word_form"
-            }}
-          ]
-        }}
-        
-        Rules:
-        1. Find ALL errors, even small ones
-        2. Provide clear explanations
-        3. Return ONLY the JSON object
-        4. No markdown formatting, no extra text
-        5. IMPORTANT: Preserve the original paragraph structure and line breaks exactly. Do not merge paragraphs.
-        
-        Text to check: "{text}"
-        
-        JSON Response:"""
+        # Prompt được tinh chỉnh cho Gemini để đảm bảo JSON đúng định dạng
+        prompt = f"""You are an expert English grammar editor.
+                Task: Correct the following text for grammar, spelling, punctuation, and vocabulary errors.
+                
+                CRITICAL RULES:
+                1. Return ONLY strict JSON.
+                2. PRESERVE the original meaning, tone, and style absolutely.
+                3. If a sentence is grammatically correct but awkward, DO NOT rewrite it (unless it's unintelligible).
+                4. Focus only on objective errors (wrong tense, wrong preposition, spelling), NOT subjective style improvements.
+                
+                Input Text: "{text}"
+            
+                Output Requirement:
+                Return ONLY a valid JSON object. Do not output markdown code blocks (```json).
+                The JSON must follow this structure exactly:
+                {{
+                  "corrected": "The fully corrected text here",
+                  "errors": [
+                    {{
+                      "original": "wrong text",
+                      "suggestion": "correct text",
+                      "message": "Explain why this is an error in 1 short sentence",
+                      "type": "grammar" 
+                    }}
+                  ]
+                }}
+            
+                Valid types are: "grammar", "spelling", "punctuation", "vocabulary", "style".
+                If there are no errors, return an empty "errors" array and the original text in "corrected".
+                """
 
         try:
             headers = {
@@ -57,144 +60,162 @@ class OpenRouterChecker(BaseGrammarChecker):
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are a professional English grammar checker. Always respond with valid JSON only, no markdown or extra text."
+                        "content": "You are a helpful AI assistant that outputs only valid JSON."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                "temperature": 0.2,  # Thấp để kết quả ổn định
-                "max_tokens": 2000,
-                "top_p": 1,
-                "frequency_penalty": 0,
-                "presence_penalty": 0
+                "temperature": 0.1,  # Giảm nhiệt độ để kết quả ổn định nhất
+                "top_p": 0.9,
             }
 
             print(f"Calling OpenRouter API with model: {self.model}")
+            response = requests.post(self.api_url, headers=headers, json=payload, timeout=30)
 
-            response = requests.post(
-                self.api_url,
-                headers=headers,
-                json=payload,
-                timeout=60  # Tăng timeout vì AI có thể chậm
-            )
-
-            # Kiểm tra lỗi HTTP
             if response.status_code != 200:
-                error_msg = f"OpenRouter API Error {response.status_code}"
-                try:
-                    error_data = response.json()
-                    error_msg += f": {error_data.get('error', {}).get('message', 'Unknown error')}"
-                except:
-                    error_msg += f": {response.text}"
-
-                print(f"{error_msg}")
-                return {
-                    "corrected": text,
-                    "errors": [],
-                    "source": f"OpenRouter (Error {response.status_code})"
-                }
+                print(f"API Error: {response.text}")
+                return {"corrected": text, "errors": [], "source": "Gemini (Error)"}
 
             data = response.json()
-
-            # Kiểm tra cấu trúc response
-            if 'choices' not in data or not data['choices']:
-                print("Invalid response structure from OpenRouter")
-                return {
-                    "corrected": text,
-                    "errors": [],
-                    "source": "OpenRouter (Invalid Response)"
-                }
-
-            # Lấy nội dung từ response
             content = data['choices'][0]['message']['content'].strip()
 
-            print(f"Raw response: {content[:200]}...")  # Debug
-
-            # Loại bỏ markdown code blocks nếu có
-            if content.startswith("```json"):
-                content = content[7:]
-            elif content.startswith("```"):
-                content = content[3:]
-
-            if content.endswith("```"):
-                content = content[:-3]
-
+            # Clean markdown nếu Gemini lỡ thêm vào
+            if content.startswith("```json"): content = content[7:]
+            if content.startswith("```"): content = content[3:]
+            if content.endswith("```"): content = content[:-3]
             content = content.strip()
 
-            # Parse JSON
-            try:
-                result = json.loads(content)
+            result = json.loads(content)
 
-                print("=" * 50)
-                print("API Response:")
-                print(f"Corrected: {result.get('corrected', '')[:100]}...")
-                print(f"Number of errors: {len(result.get('errors', []))}")
-                for i, err in enumerate(result.get('errors', [])[:3]):  # In 3 lỗi đầu
-                    print(f"Error {i}:")
-                    print(f"  - original: {err.get('original')}")
-                    print(f"  - suggestion: {err.get('suggestion')}")
-                    print(f"  - message: {err.get('message')}")
-                print("=" * 50)
-            except json.JSONDecodeError as e:
-                print(f"JSON Parse Error: {e}")
-                print(f"Content: {content}")
+            # Chuẩn hóa dữ liệu trả về
+            if "corrected" not in result: result["corrected"] = text
+            if "errors" not in result: result["errors"] = []
 
-                # Thử tìm JSON trong text
-                import re
-                json_match = re.search(r'\{.*\}', content, re.DOTALL)
-                if json_match:
-                    try:
-                        result = json.loads(json_match.group())
-                    except:
-                        return {
-                            "corrected": text,
-                            "errors": [],
-                            "source": "OpenRouter (JSON Parse Failed)"
-                        }
-                else:
-                    return {
-                        "corrected": text,
-                        "errors": [],
-                        "source": "OpenRouter (No JSON Found)"
-                    }
-
-            # Đảm bảo có đầy đủ fields
-            if "corrected" not in result:
-                result["corrected"] = text
-            if "errors" not in result:
-                result["errors"] = []
-
-            valid_errors = []
-            for error in result.get("errors", []):
-                original = error.get("original", "").strip()
-                suggestion = error.get("suggestion", "").strip()
-
-                # Chỉ thêm vào nếu có sự khác biệt (không phân biệt hoa thường)
-                if original and suggestion and original.lower() != suggestion.lower():
-                    valid_errors.append(error)
-
-            result["errors"] = valid_errors  # Gán lại danh sách đã lọc
-
-            # Thêm thông tin về model đã dùng
-            result["source"] = f"OpenRouter ({self.model})"
-
-            print(f"Found {len(result['errors'])} errors")
+            result["source"] = "Google Gemini 2.0 Flash"
             return result
 
-        except requests.exceptions.Timeout:
-            print("Request timeout")
-            return {
-                "corrected": text,
-                "errors": [],
-                "source": "OpenRouter (Timeout)"
+        except Exception as e:
+            print(f"OpenRouter Exception: {e}")
+            return {"corrected": text, "errors": [], "source": "Gemini (Exception)"}
+
+    #Code rewrite
+    # def rewrite(self, text: str, style: str) -> dict:
+    #     """
+    #     Hàm viết lại văn bản theo phong cách cụ thể (Formal, Creative, Concise)
+    #     """
+    #     if not text.strip():
+    #         return {"rewritten": ""}
+    #
+    #     style_prompts = {
+    #         "Formal": "Make the text more professional, academic, and polite.",
+    #         "Creative": "Make the text more engaging, descriptive, and vivid.",
+    #         "Concise": "Make the text shorter, clearer, and remove unnecessary words."
+    #     }
+    #
+    #     selected_instruction = style_prompts.get(style, style_prompts["Formal"])
+    #
+    #     prompt = f"""You are an expert writing assistant.
+    #     Task: Rewrite the following text.
+    #     Style Goal: {selected_instruction}
+    #
+    #     CRITICAL RULES:
+    #     1. Keep the original meaning 100% intact. Do not add new facts.
+    #     2. Output ONLY a valid JSON object. No markdown.
+    #
+    #     Input Text: "{text}"
+    #
+    #     JSON Structure:
+    #     {{
+    #         "rewritten": "The rewritten version here"
+    #     }}
+    #     """
+    #
+    #     try:
+    #         payload = {
+    #             "model": self.model,
+    #             "messages": [
+    #                 {"role": "system", "content": "You are a helpful AI writing assistant."},
+    #                 {"role": "user", "content": prompt}
+    #             ],
+    #             "temperature": 0.7,  # Tăng nhẹ để văn phong tự nhiên hơn
+    #         }
+    #
+    #         response = requests.post(self.api_url, headers={
+    #             "Content-Type": "application/json",
+    #             "Authorization": f"Bearer {self.api_key}",
+    #             "HTTP-Referer": "http://localhost:8000",
+    #             "X-Title": "Grammar Checker Pro"
+    #         }, json=payload, timeout=30)
+    #
+    #         data = response.json()
+    #         content = data['choices'][0]['message']['content'].strip()
+    #
+    #         # Clean markdown
+    #         if content.startswith("```json"): content = content[7:]
+    #         if content.startswith("```"): content = content[3:]
+    #         if content.endswith("```"): content = content[:-3]
+    #
+    #         result = json.loads(content.strip())
+    #         return {"rewritten": result.get("rewritten", text), "style": style}
+    #
+    #     except Exception as e:
+    #         print(f"Rewrite Error: {e}")
+    #         return {"rewritten": text, "error": str(e)}
+
+    def rewrite_text(self, text: str, style: str = "Formal") -> dict:
+        if not text.strip():
+            return {}
+
+        # Định nghĩa hướng dẫn cho từng style
+        style_instructions = {
+            "Formal": "Make the text professional, academic, and polite. Use sophisticated vocabulary.",
+            "Creative": "Make the text engaging, vivid, and storytelling-oriented. Use metaphors if appropriate.",
+            "Concise": "Make the text short, clear, and to the point. Remove unnecessary words."
+        }
+
+        instruction = style_instructions.get(style, style_instructions["Formal"])
+
+        prompt = f"""You are a professional writing assistant.
+        Task: Rewrite the input text according to the following style goal.
+
+        Style Goal: {instruction}
+
+        Input Text: "{text}"
+
+        Output Requirement:
+        Return ONLY a valid JSON object. No markdown.
+        {{
+            "rewritten_text": "The rewritten version of the text"
+        }}
+        """
+
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+                "HTTP-Referer": "http://localhost:8000",
+                "X-Title": "Grammar Checker Pro"
             }
 
-        except Exception as e:
-            print(f"Exception: {type(e).__name__}: {e}")
-            return {
-                "corrected": text,
-                "errors": [],
-                "source": "OpenRouter (Exception)"
+            payload = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
             }
+
+            response = requests.post(self.api_url, headers=headers, json=payload, timeout=45)
+            data = response.json()
+            content = data['choices'][0]['message']['content'].strip()
+
+            # Clean markdown
+            if content.startswith("```json"): content = content[7:]
+            if content.startswith("```"): content = content[3:]
+            if content.endswith("```"): content = content[:-3]
+
+            return json.loads(content.strip())
+
+        except Exception as e:
+            print(f"Rewrite Error: {e}")
+            return {}

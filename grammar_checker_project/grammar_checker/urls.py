@@ -8,6 +8,7 @@
 from django.urls import path
 
 from grammar_checker.views.api import UploadFileAPI
+from grammar_checker.views.api.rewrite_text import RewriteTextAPI
 from grammar_checker.views.editor.editor_view import EditorView
 from grammar_checker.views.auth.login import LoginView
 from grammar_checker.views.auth.register import RegisterView
@@ -32,6 +33,7 @@ urlpatterns = [
     path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('api/check/', CheckGrammarAPI.as_view(), name='check_grammar_api'),
     path('api/upload/', UploadFileAPI.as_view(), name='api_upload_file'),
+    path('api/rewrite/', RewriteTextAPI.as_view(), name='api_rewrite_text'),
 
 #export
     path('export/pdf/<int:request_id>/', lambda req, request_id: export_to_pdf(
