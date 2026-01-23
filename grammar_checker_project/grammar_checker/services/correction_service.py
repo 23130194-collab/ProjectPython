@@ -65,30 +65,36 @@ class CorrectionService:
     @staticmethod
     def select_best_result(gemini_res, t5_res):
         """
-        Chọn model:
-        1. Ưu tiên Gemini vì hiểu ngữ nghĩa và giải thích tốt hơn.
-        2. Nếu Gemini trả về lỗi (errors > 0), chọn Gemini.
-        3. Nếu Gemini KHÔNG tìm thấy lỗi nào, nhưng T5 tìm thấy lỗi -> Chọn T5.
-        4. Nếu Gemini bị lỗi hệ thống (Exception), thì chọn T5.
+        Cố gắng bắt lỗi nhiều nhất có thể
+        So sánh số lượng lỗi tìm được. Model nào tìm ra nhiều lỗi hơn sẽ được chọn.
         """
-        gemini_errors = gemini_res.get("errors", [])
-        t5_errors = t5_res.get("errors", [])
 
-        print(f"So sánh: Gemini tìm thấy {len(gemini_errors)} lỗi - T5 tìm thấy {len(t5_errors)} lỗi")
-
-        # Trường hợp Gemini bị lỗi kết nối hoặc parse JSON
+        # Xử lý trường hợp một trong hai model bị lỗi hệ thống (Exception/API Error)
+        # Nếu Gemini lỗi, dùng T5
         if "Error" in gemini_res.get("source", "") or "Exception" in gemini_res.get("source", ""):
+            print("Gemini gặp lỗi, chuyển sang dùng T5.")
             return t5_res
 
-        # Nếu Gemini tìm thấy lỗi, ưu tiên dùng nó
-        if len(gemini_errors) > 0:
+        # Nếu T5 lỗi, dùng Gemini
+        if "Error" in t5_res.get("source", ""):
             return gemini_res
 
-        # Nếu Gemini trả về không có lỗi, nhưng T5 lại bắt được lỗi
-        # Chuyển sang T5 để kiểm tra lại.
-        if len(gemini_errors) == 0 and len(t5_errors) > 0:
-            print("Gemini không thấy lỗi, Fallback sang T5")
+        # Đếm số lượng lỗi
+        gemini_count = len(gemini_res.get("errors", []))
+        t5_count = len(t5_res.get("errors", []))
+
+        print(f"So sánh: Gemini ({gemini_count} lỗi) vs T5 ({t5_count} lỗi)")
+
+        # So sánh số lượng lỗi giữa hai model
+        if t5_count > gemini_count:
+            print("=> Chọn T5 vì tìm thấy nhiều lỗi hơn.")
             return t5_res
 
-        # Mặc định dùng Gemini
+        if gemini_count > t5_count:
+            print("=> Chọn Gemini vì tìm thấy nhiều lỗi hơn.")
+            return gemini_res
+
+        # Trường hợp hòa (số lỗi bằng nhau) hoặc cả 2 đều = 0
+        # Ưu tiên Gemini vì lời giải thích lỗi (message) của nó dễ hiểu hơn cho con người.
+        print("=> Số lỗi bằng nhau. Hoàn thành")
         return gemini_res
