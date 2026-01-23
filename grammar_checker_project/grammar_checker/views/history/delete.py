@@ -13,9 +13,6 @@ class HistoryDeleteView(LoginRequiredMixin, DeleteView):
     def get_queryset(self):
         return CorrectionRequest.objects.filter(user=self.request.user)
 
-    # QUAN TRỌNG NHẤT: BẮT BUỘC PHẢI CÓ 2 DÒNG NÀY!
-    # 1. Không dùng template
-    # 2. Xử lý delete ngay khi GET (thay vì POST + confirm)
     def get(self, request, *args, **kwargs):
         # Lấy object trước
         obj = self.get_object()
@@ -23,6 +20,5 @@ class HistoryDeleteView(LoginRequiredMixin, DeleteView):
         obj.delete()
         return redirect(self.success_url)
 
-    # Nếu ai đó gửi POST thì cũng xóa luôn (phòng trường hợp)
     def post(self, request, *args, **kwargs):
         return self.get(request, *args, **kwargs)

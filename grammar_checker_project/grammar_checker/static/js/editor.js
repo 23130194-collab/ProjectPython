@@ -10,7 +10,7 @@ function getCSRFToken() {
     return tokenInput ? tokenInput.value : "";
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log("Grammarly-like Grammar Checker Loaded");
     createTooltipElement();
 
@@ -41,11 +41,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 background-color: rgba(220, 53, 69, 0.2);
             }
         `,
-        setup: function(editor) {
+        setup: function (editor) {
             activeEditor = editor;
 
             // Auto check on typing
-            editor.on('keyup', function(e) {
+            editor.on('keyup', function (e) {
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
                     performGrammarCheck();
@@ -53,12 +53,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // QUAN TRỌNG: Click event phải bind vào editor body
-            editor.on('init', function() {
+            editor.on('init', function () {
                 const editorBody = editor.getBody();
 
                 // Sử dụng event delegation
-                editorBody.addEventListener('click', function(e) {
-                    console.log("🖱️ Clicked on:", e.target);
+                editorBody.addEventListener('click', function (e) {
+                    console.log("Clicked on:", e.target);
 
                     // Tìm span.grammar-error gần nhất
                     let target = e.target;
@@ -119,9 +119,9 @@ async function performGrammarCheck() {
 
     // Lấy nội dung text thuần túy để kiểm tra
     const text = activeEditor.getContent({format: 'text'}).trim();
-    
-    console.log("📝 Text to check:", text); // Debug log
-    console.log("📝 Text length before sending to /api/check/:", text.length); // NEW DEBUG LOG
+
+    console.log("Text to check:", text); // Debug log
+    console.log("Text length before sending to /api/check/:", text.length); // NEW DEBUG LOG
 
     if (!text || text.length < 3) {
         console.log("Text too short or empty, skipping check.");
@@ -152,9 +152,9 @@ async function performGrammarCheck() {
             // Xử lý lỗi từ server trả về (ví dụ 400 Bad Request)
             console.error("Server Error:", data);
             if (data.error) {
-                 alert("Lỗi: " + data.error); // Hiển thị lỗi cho người dùng biết (ví dụ quá 1500 từ)
+                alert("Lỗi: " + data.error); // Hiển thị lỗi cho người dùng biết (ví dụ quá 1500 từ)
             } else {
-                 alert("Đã xảy ra lỗi khi kiểm tra ngữ pháp. Mã lỗi: " + response.status);
+                alert("Đã xảy ra lỗi khi kiểm tra ngữ pháp. Mã lỗi: " + response.status);
             }
             updateStatusBar(0);
             return;
@@ -201,15 +201,12 @@ function highlightErrors(errors) {
             suggestion = err.suggestion;
         }
 
-        // SỬA LỖI TẠI ĐÂY:
-        // Chỉ bỏ qua nếu KHÔNG CÓ original.
-        // Suggestion được phép rỗng (trường hợp xóa từ).
         if (!original) {
             console.warn(`Skipping error ${index}: missing original`);
             return;
         }
 
-        console.log(`🔍 Đang thử highlight lỗi: "${original}" -> "${suggestion}"`);
+        console.log(`Đang thử highlight lỗi: "${original}" -> "${suggestion}"`);
         content = highlightTextInHTML(content, original, suggestion, err.message, err.type, index);
     });
 
@@ -219,16 +216,13 @@ function highlightErrors(errors) {
 
 function highlightTextInHTML(htmlContent, textToHighlight, suggestion, message, errorType, errorIndex) {
     // 1. Tách từ khóa thành các phần dựa trên khoảng trắng
-    // Ví dụ: "didn't listened" -> ["didn't", "listened"]
     const parts = textToHighlight.split(/\s+/);
 
     const regexParts = parts.map(part => {
         // 2. Escape các ký tự đặc biệt của Regex trong từ (như dấu chấm, dấu hỏi...)
         let esc = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // 3. [QUAN TRỌNG] Xử lý TOÀN DIỆN các loại dấu nháy:
-        // Tìm BẤT KỲ loại dấu nháy nào trong từ khóa (thẳng ' hoặc cong ’)
-        // Thay thế bằng nhóm Regex chấp nhận TẤT CẢ các biến thể có thể xuất hiện trong HTML:
+        // 3. Xử lý các loại dấu nháy:
         // - '       : Nháy thẳng
         // - ’       : Nháy cong (Smart quote)
         // - &#39;   : Mã decimal nháy thẳng
@@ -245,11 +239,9 @@ function highlightTextInHTML(htmlContent, textToHighlight, suggestion, message, 
     const searchPattern = regexParts.join(wordSeparator);
 
     // 5. Tạo Regex:
-    // Nhóm 1: Thẻ HTML (để bỏ qua)
-    // Nhóm 2: Từ khóa cần tìm
     const regex = new RegExp(`(<[^>]+>)|(${searchPattern})`, 'gi');
 
-    return htmlContent.replace(regex, function(match, tagMatch, textMatch) {
+    return htmlContent.replace(regex, function (match, tagMatch, textMatch) {
         // Nếu là thẻ HTML -> giữ nguyên
         if (tagMatch) {
             return tagMatch;
@@ -284,8 +276,6 @@ function clearAllHighlights() {
     activeEditor.setContent(content);
 }
 
-// === TOOLTIP SYSTEM ===
-
 function createTooltipElement() {
     tooltip = document.createElement('div');
     tooltip.className = 'grammar-tooltip';
@@ -303,13 +293,13 @@ function createTooltipElement() {
     `;
     document.body.appendChild(tooltip);
 
-    tooltip.querySelector('.dismiss-btn').onclick = function(e) {
+    tooltip.querySelector('.dismiss-btn').onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
         hideTooltip();
     };
 
-    tooltip.querySelector('#apply-fix-btn').onclick = function(e) {
+    tooltip.querySelector('#apply-fix-btn').onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
         applyFix();
@@ -319,8 +309,8 @@ function createTooltipElement() {
 let currentErrorSpan = null;
 
 function showTooltip(targetSpan, x, y, original, suggestion, message, errorType) {
-    console.log("📌 Showing tooltip");
-    console.log("  Suggestion:", suggestion);
+    console.log("Showing tooltip");
+    console.log("   Suggestion:", suggestion);
 
     currentErrorSpan = targetSpan;
 
@@ -340,8 +330,6 @@ function showTooltip(targetSpan, x, y, original, suggestion, message, errorType)
         suggestionBtn.dataset.action = "replace";
     }
     suggestionBtn.style.display = 'flex';
-
-    // === VỊ TRÍ SÁT NGAY DƯỚI LỖI ===
 
     const spanRect = targetSpan.getBoundingClientRect();
 
@@ -367,7 +355,7 @@ function showTooltip(targetSpan, x, y, original, suggestion, message, errorType)
     tooltip.style.left = `${left}px`;
     tooltip.style.display = 'block';
 
-    console.log("✅ Tooltip displayed at:", { top, left });
+    console.log("Tooltip:", {top, left});
 }
 
 function hideTooltip() {
@@ -389,21 +377,19 @@ function applyFix() {
     const errorIndex = parseInt(currentErrorSpan.dataset.errorIndex);
     const action = tooltip.querySelector('#apply-fix-btn').dataset.action;
 
-    // --- BẮT ĐẦU SỬA (Sử dụng Selection API để thay thế sạch sẽ) ---
-    activeEditor.undoManager.transact(function() {
-        // 1. Chọn toàn bộ thẻ span bị lỗi (bôi đen nó)
+    // BẮT ĐẦU SỬA
+    activeEditor.undoManager.transact(function () {
+        // 1. Chọn toàn bộ thẻ span bị lỗi
         activeEditor.selection.select(currentErrorSpan);
 
-        // 2. Ghi đè nội dung vào vùng chọn
-        // Việc này sẽ tự động xóa thẻ span cũ và chèn text mới vào
+        // 2. Ghi đè nội dung
         if (action === "remove" || !suggestion) {
             activeEditor.selection.setContent(""); // Xóa
         } else {
-            // Chèn text thuần túy (để tránh lỗi format HTML)
+            // Chèn text
             activeEditor.selection.setContent(activeEditor.dom.encode(suggestion));
         }
     });
-    // --- KẾT THÚC SỬA ---
 
     // Xử lý logic mảng lỗi
     if (!isNaN(errorIndex) && currentErrors[errorIndex]) {
@@ -419,19 +405,19 @@ function applyFix() {
 // Hàm mới để đếm chính xác số lỗi đang hiển thị
 function countAndDisplayErrors() {
     if (!activeEditor) return;
-    
+
     // Đếm số thẻ span lỗi thực tế trong editor
     const errorSpans = activeEditor.getBody().querySelectorAll('.grammar-error');
     const count = errorSpans.length;
-    
+
     console.log(`Real error count in DOM: ${count}`);
-    
+
     // Nếu hết lỗi thì tự động check lại
     if (count === 0 && currentErrors.length > 0) {
-         console.log("All errors fixed! Triggering re-check...");
-         clearAllHighlights();
-         updateStatusBar(-1);
-         setTimeout(() => {
+        console.log("All errors fixed! Triggering re-check...");
+        clearAllHighlights();
+        updateStatusBar(-1);
+        setTimeout(() => {
             performGrammarCheck();
         }, 800);
     } else {
@@ -439,7 +425,6 @@ function countAndDisplayErrors() {
     }
 }
 
-// === TÍNH NĂNG MỚI: FIX ALL ERRORS ===
 function fixAllErrors() {
     if (!activeEditor) return;
 
@@ -456,7 +441,7 @@ function fixAllErrors() {
         return;
     }
 
-    activeEditor.undoManager.transact(function() {
+    activeEditor.undoManager.transact(function () {
         // Duyệt ngược từ dưới lên để tránh làm lệch vị trí DOM khi thay thế
         for (let i = errorSpans.length - 1; i >= 0; i--) {
             const span = errorSpans[i];
@@ -476,9 +461,9 @@ function fixAllErrors() {
     // Sau khi sửa xong
     currentErrors = [];
     updateStatusBar(0);
-    clearAllHighlights(); // Xóa sạch tàn dư nếu có
+    clearAllHighlights();
 
-    // Tự động kiểm tra lại sau 1 giây để đảm bảo
+    // Tự động kiểm tra lại
     setTimeout(() => {
         performGrammarCheck();
     }, 1000);
@@ -494,12 +479,11 @@ function updateStatusBar(errorCount, source = '') {
     if (!statusbar) return;
 
     if (errorCount === -1) {
-        // Checking...
+        // Check
         statusHTML = '<span style="color: #17a2b8; font-weight: 600;">Checking grammar...</span>';
         if (rewriteBtn) rewriteBtn.style.display = 'none';
         if (fixAllBtn) fixAllBtn.style.display = 'none';
-    }
-    else if (errorCount === 0) {
+    } else if (errorCount === 0) {
         // No errors
         statusHTML = `<span style="color: #28a745; font-weight: 600;">No grammar errors found.</span>`;
         if (source) statusHTML += ` <span style="color: #6c757d; font-size: 11px; margin-left: 10px;">(Checked by ${source})</span>`;
@@ -509,15 +493,14 @@ function updateStatusBar(errorCount, source = '') {
             rewriteBtn.classList.add('animate__animated', 'animate__pulse');
         }
         if (fixAllBtn) fixAllBtn.style.display = 'none'; // Ẩn nút Fix All
-    }
-    else {
+    } else {
         // Found errors
         statusHTML = `<span style="color: #dc3545; font-weight: 700;">Found ${errorCount} errors</span>`;
         if (source) statusHTML += ` <span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 8px; color: #495057;">🤖 ${source}</span>`;
 
         if (rewriteBtn) rewriteBtn.style.display = 'none';
-        
-        // HIỆN NÚT FIX ALL
+
+        // Hiện FIX ALL
         if (fixAllBtn) {
             fixAllBtn.style.display = 'block';
             fixAllBtn.innerText = `Fix All (${errorCount})`;
@@ -542,7 +525,6 @@ function showActionButtons(requestId) {
     const docx = document.getElementById('export-docx');
 
     if (box && pdf && docx) {
-        // Đổi từ 'block' sang 'flex' để các nút nằm ngang đẹp mắt
         box.style.display = 'flex';
 
         pdf.href = `/export/pdf/${requestId}/`;
@@ -550,9 +532,7 @@ function showActionButtons(requestId) {
     }
 }
 
-// === FILE UPLOAD ===
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
@@ -603,7 +583,7 @@ async function handleFileUpload(event) {
 
 let currentRewrittenText = "";
 
-// 1. Mở Modal (Reset về bước 1)
+// 1. Mở Modal
 function openRewriteModal() {
     const text = activeEditor.getContent({format: 'text'}).trim();
     if (!text) {
@@ -641,7 +621,7 @@ async function requestRewrite(style) {
             },
             body: JSON.stringify({
                 text: text,
-                style: style // Gửi style lên server
+                style: style
             })
         });
 
@@ -667,13 +647,15 @@ async function requestRewrite(style) {
 // 4. Áp dụng kết quả vào Editor
 function applyRewriteResult() {
     if (currentRewrittenText) {
-        activeEditor.setContent(currentRewrittenText);
+        const formattedHTML = currentRewrittenText
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .map(line => `<p>${line}</p>`)
+            .join('');
+        activeEditor.setContent(formattedHTML);
         closeRewriteModal();
 
-        // Re-check lại sau khi sửa (để đảm bảo không còn lỗi mới)
-        setTimeout(() => {
-            performGrammarCheck();
-        }, 500);
     }
 }
 

@@ -19,7 +19,7 @@ class CorrectionService:
         gemini_checker = OpenRouterChecker()
         t5_checker = HuggingFaceChecker()
 
-        print("--- Bắt đầu kiểm tra song song ---")
+        print("Bắt đầu kiểm tra song song")
 
         # 2. Chạy model T5 (Local/Server)
         try:
@@ -28,17 +28,17 @@ class CorrectionService:
             print(f"T5 Error: {e}")
             t5_result = {"corrected": clean_text, "errors": [], "source": "T5 (Failed)"}
 
-        # 3. Chạy model Gemini (API)
+        # 3. Chạy model Gemini
         try:
             gemini_result = gemini_checker.correct(clean_text)
         except Exception as e:
             print(f"Gemini Error: {e}")
             gemini_result = {"corrected": clean_text, "errors": [], "source": "Gemini (Failed)"}
 
-        # 4. Logic chọn kết quả tốt nhất (Best Result Selection)
+        # 4. Logic chọn kết quả tốt nhất
         final_result = CorrectionService.select_best_result(gemini_result, t5_result)
 
-        # 5. Lưu vào Database (Lưu kết quả được chọn)
+        # 5. Lưu vào Database
         request = CorrectionRequest.objects.create(
             user=user,
             original_text=text,
@@ -46,7 +46,7 @@ class CorrectionService:
             status="COMPLETED"
         )
 
-        # Lưu chi tiết (Có thể lưu cả 2 để debug nếu muốn, ở đây lưu cái được chọn)
+        # Lưu chi tiết
         CorrectionResult.objects.create(
             request=request,
             checker_name=final_result["source"],
@@ -65,11 +65,11 @@ class CorrectionService:
     @staticmethod
     def select_best_result(gemini_res, t5_res):
         """
-        Quy tắc chọn model:
-        1. Ưu tiên Gemini vì model này hiểu ngữ nghĩa và giải thích tốt hơn.
+        Chọn model:
+        1. Ưu tiên Gemini vì hiểu ngữ nghĩa và giải thích tốt hơn.
         2. Nếu Gemini trả về lỗi (errors > 0), chọn Gemini.
-        3. Nếu Gemini KHÔNG tìm thấy lỗi nào, nhưng T5 tìm thấy lỗi -> Chọn T5 (đề phòng Gemini bỏ sót).
-        4. Nếu Gemini bị lỗi hệ thống (Exception), chọn T5.
+        3. Nếu Gemini KHÔNG tìm thấy lỗi nào, nhưng T5 tìm thấy lỗi -> Chọn T5.
+        4. Nếu Gemini bị lỗi hệ thống (Exception), thì chọn T5.
         """
         gemini_errors = gemini_res.get("errors", [])
         t5_errors = t5_res.get("errors", [])
@@ -80,12 +80,12 @@ class CorrectionService:
         if "Error" in gemini_res.get("source", "") or "Exception" in gemini_res.get("source", ""):
             return t5_res
 
-        # Nếu Gemini tìm thấy lỗi, ưu tiên dùng nó (vì giải thích xịn hơn)
+        # Nếu Gemini tìm thấy lỗi, ưu tiên dùng nó
         if len(gemini_errors) > 0:
             return gemini_res
 
-        # Nếu Gemini nói "Hoàn hảo" (0 lỗi), nhưng T5 lại bắt được lỗi
-        # -> Có thể Gemini bị lazy, hãy thử tin T5
+        # Nếu Gemini trả về không có lỗi, nhưng T5 lại bắt được lỗi
+        # Chuyển sang T5 để kiểm tra lại.
         if len(gemini_errors) == 0 and len(t5_errors) > 0:
             print("Gemini không thấy lỗi, Fallback sang T5")
             return t5_res

@@ -5,9 +5,8 @@ from django.urls import reverse_lazy
 
 class LoginView(BaseLoginView):
     template_name = 'auth/login.html'
-    redirect_authenticated_user = True          # Nếu đã đăng nhập rồi thì không vào trang login nữa
-    success_url = reverse_lazy('editor')        # Đăng nhập thành công → về trang chủ
+    redirect_authenticated_user = True
+    success_url = reverse_lazy('editor')
 
     def get_success_url(self):
-        # Có thể thêm thông báo thành công ở đây nếu muốn
         return self.success_url

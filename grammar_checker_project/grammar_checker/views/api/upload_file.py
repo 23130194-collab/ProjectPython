@@ -17,7 +17,7 @@ class UploadFileAPI(APIView):
 
         uploaded_file = request.FILES['file']
 
-        # Kiểm tra dung lượng (ví dụ giới hạn 5MB)
+        # Kiểm tra dung lượng
         if uploaded_file.size > 5 * 1024 * 1024:
             return Response(
                 {"error": "File quá lớn (tối đa 5MB)"},

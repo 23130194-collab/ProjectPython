@@ -8,7 +8,7 @@ class OpenRouterChecker(BaseGrammarChecker):
     def __init__(self):
         # API Configuration
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.api_key = "xxxx"
+        self.api_key = "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"
 
         self.model = "google/gemini-2.0-flash-001"
 
@@ -16,7 +16,7 @@ class OpenRouterChecker(BaseGrammarChecker):
         if not text.strip():
             return {"corrected": text, "errors": [], "source": "Gemini AI"}
 
-        # Prompt được tinh chỉnh cho Gemini để đảm bảo JSON đúng định dạng
+        # Prompt đcho Gemini để JSON đúng định dạng
         prompt = f"""You are an expert English grammar editor.
                 Task: Correct the following text for grammar, spelling, punctuation, and vocabulary errors.
                 
@@ -67,7 +67,7 @@ class OpenRouterChecker(BaseGrammarChecker):
                         "content": prompt
                     }
                 ],
-                "temperature": 0.1,  # Giảm nhiệt độ để kết quả ổn định nhất
+                "temperature": 0.1,
                 "top_p": 0.9,
             }
 
@@ -99,70 +99,6 @@ class OpenRouterChecker(BaseGrammarChecker):
         except Exception as e:
             print(f"OpenRouter Exception: {e}")
             return {"corrected": text, "errors": [], "source": "Gemini (Exception)"}
-
-    #Code rewrite
-    # def rewrite(self, text: str, style: str) -> dict:
-    #     """
-    #     Hàm viết lại văn bản theo phong cách cụ thể (Formal, Creative, Concise)
-    #     """
-    #     if not text.strip():
-    #         return {"rewritten": ""}
-    #
-    #     style_prompts = {
-    #         "Formal": "Make the text more professional, academic, and polite.",
-    #         "Creative": "Make the text more engaging, descriptive, and vivid.",
-    #         "Concise": "Make the text shorter, clearer, and remove unnecessary words."
-    #     }
-    #
-    #     selected_instruction = style_prompts.get(style, style_prompts["Formal"])
-    #
-    #     prompt = f"""You are an expert writing assistant.
-    #     Task: Rewrite the following text.
-    #     Style Goal: {selected_instruction}
-    #
-    #     CRITICAL RULES:
-    #     1. Keep the original meaning 100% intact. Do not add new facts.
-    #     2. Output ONLY a valid JSON object. No markdown.
-    #
-    #     Input Text: "{text}"
-    #
-    #     JSON Structure:
-    #     {{
-    #         "rewritten": "The rewritten version here"
-    #     }}
-    #     """
-    #
-    #     try:
-    #         payload = {
-    #             "model": self.model,
-    #             "messages": [
-    #                 {"role": "system", "content": "You are a helpful AI writing assistant."},
-    #                 {"role": "user", "content": prompt}
-    #             ],
-    #             "temperature": 0.7,  # Tăng nhẹ để văn phong tự nhiên hơn
-    #         }
-    #
-    #         response = requests.post(self.api_url, headers={
-    #             "Content-Type": "application/json",
-    #             "Authorization": f"Bearer {self.api_key}",
-    #             "HTTP-Referer": "http://localhost:8000",
-    #             "X-Title": "Grammar Checker Pro"
-    #         }, json=payload, timeout=30)
-    #
-    #         data = response.json()
-    #         content = data['choices'][0]['message']['content'].strip()
-    #
-    #         # Clean markdown
-    #         if content.startswith("```json"): content = content[7:]
-    #         if content.startswith("```"): content = content[3:]
-    #         if content.endswith("```"): content = content[:-3]
-    #
-    #         result = json.loads(content.strip())
-    #         return {"rewritten": result.get("rewritten", text), "style": style}
-    #
-    #     except Exception as e:
-    #         print(f"Rewrite Error: {e}")
-    #         return {"rewritten": text, "error": str(e)}
 
     def rewrite_text(self, text: str, style: str = "Formal") -> dict:
         if not text.strip():

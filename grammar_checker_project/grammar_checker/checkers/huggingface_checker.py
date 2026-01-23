@@ -39,7 +39,7 @@ class HuggingFaceChecker(BaseGrammarChecker):
         if not valid_sentences:
             return {"corrected": text, "errors": [], "source": "HuggingFace"}
 
-        # BATCH INFERENCE: Sửa tất cả các câu cùng lúc
+        # Sửa tất cả các câu cùng lúc
         input_texts = ["grammar: " + s for s in valid_sentences]
         inputs = HuggingFaceChecker._tokenizer(
             input_texts, return_tensors="pt", padding=True, truncation=True, max_length=512
@@ -50,7 +50,7 @@ class HuggingFaceChecker(BaseGrammarChecker):
                 inputs.input_ids,
                 max_length=512,
                 # TĂNG ĐỘ CHÍNH XÁC:
-                num_beams=5,          # Tìm kiếm kỹ hơn (thay vì 1)
+                num_beams=5,          # Tìm kiếm kỹ hơn
                 early_stopping=True,
                 repetition_penalty=1.2 # Tránh lặp từ
             )
@@ -119,7 +119,7 @@ class HuggingFaceChecker(BaseGrammarChecker):
             bad_segment = " ".join(bad_segment_list)
             suggestion = " ".join(suggestion_list)
 
-            # Bỏ qua nếu clean match (như đã làm)
+            # Bỏ qua nếu clean match
             if self.is_clean_match(bad_segment, suggestion) and tag != 'delete':
                 continue
 

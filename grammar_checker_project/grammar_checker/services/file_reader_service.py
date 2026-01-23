@@ -8,7 +8,7 @@ class FileReaderService:
     @staticmethod
     def read_file(uploaded_file):
         """
-        Đọc file upload (InMemoryUploadedFile) và trả về string text.
+        Đọc file upload và trả về string text.
         Hỗ trợ: .txt, .docx, .pdf
         """
         filename = uploaded_file.name.lower()
