@@ -6,8 +6,8 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Lịch sử kiểm tra ngữ pháp</h2>
-        <a href="{% url 'editor' %}" class="btn btn-success">Viết mới</a>
+        <h2>Lịch sử kiểm tra</h2>
+        <a href="{% url 'editor' %}" class="btn btn-success">Check</a>
     </div>
 
     {% if requests %}
@@ -20,7 +20,7 @@
                             {{ req.created_at|date:"d/m/Y H:i" }}
                         </small>
                         <p class="mb-2 text-truncate" style="max-width: 600px;">
-                            <strong>Original:</strong> {{ req.original_text|truncatechars:120 }}
+                            <strong>Văn bản gốc:</strong> {{ req.original_text|truncatechars:120 }}
                         </p>
                         <p class="mb-0 text-success">
                             <strong>Đã sửa:</strong> {{ req.corrected_text|truncatechars:100 }}
