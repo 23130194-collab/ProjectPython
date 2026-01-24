@@ -8,7 +8,7 @@ class OpenRouterChecker(BaseGrammarChecker):
     def __init__(self):
         # API Configuration
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        self.api_key = "xxxxx"
+        self.api_key = "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"
 
         self.model = "google/gemini-2.0-flash-001"
 
